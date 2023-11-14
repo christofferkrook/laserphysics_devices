@@ -1,0 +1,2 @@
+reuqires
+pip install pyvisa
