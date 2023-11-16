@@ -183,8 +183,10 @@ while True:
         print("Number of averages changed to " + ave + ".")
 
     elif command == "quit":
-        osa.osa.close()
-        print("Communication with OSA closed.")
+        try:
+            osa.osa.close()
+        except:
+            print("Not connected to OSA. Nothing to close.")
         break
     else:
         print(" --- Command not recognized")
