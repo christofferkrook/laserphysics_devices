@@ -32,8 +32,6 @@ class ANDO_OSA:
         self.center_label.grid(column=2, pady=5, row=0)
         self.start_entry = ttk.Entry(self.wl_frame)
         self.start_entry.grid(column=0, padx=5, pady=5, row=1)
-        self.start_entry.bind("<Return>", self.update_start)
-        self.start_entry.bind("<FocusOut>", self.update_start)
         self.stop_entry = ttk.Entry(self.wl_frame)
         self.stop_entry.grid(column=1, pady=5, row=1)
         self.stop_entry.bind("<Return>", self.update_stop)
@@ -70,10 +68,10 @@ class ANDO_OSA:
         self.trace_E.configure(text='Trace E')
         self.trace_E.grid(column=4, padx=5, row=1)
         self.trace_A.configure(command=self.update_chosen_trace)
-        self.trace_E.configure(command=self.update_chosen_trace)
         self.trace_B.configure(command=self.update_chosen_trace)
         self.trace_C.configure(command=self.update_chosen_trace)
         self.trace_D.configure(command=self.update_chosen_trace)
+        self.trace_E.configure(command=self.update_chosen_trace)
         
         self.update_button = ttk.Button(self.trace_frame)
         self.update_button.configure(text='Update')
@@ -150,7 +148,7 @@ class ANDO_OSA:
         self.settings_frame.grid(column=1, row=0)
         frame11.pack(expand=False)
 
-        self.set_init_values()
+        #self.set_init_values()
 
         # Main widget
         self.write_to_log("GUI initialized")
@@ -158,16 +156,16 @@ class ANDO_OSA:
         # Main widget
         self.mainwindow = frame11
 
-    def set_init_values(self):
-        self.start_entry.insert(0, "350")
-        self.stop_entry.insert(0, "1750")
-        self.update_center_entry()
-        self.update_span_entry()
-        self.averages_entry.insert(0, "1")
-        self.resolution = self.__values[0]
-        self.scale = "LOG"
-        self.update_chosen_trace()
-        self.write_to_log("Initial values set")
+    # def set_init_values(self):
+    #     self.start_entry.insert(0, "350")
+    #     self.stop_entry.insert(0, "1750")
+    #     self.update_center_entry()
+    #     self.update_span_entry()
+    #     self.averages_entry.insert(0, "1")
+    #     self.resolution = self.__values[0]
+    #     self.scale = "LOG"
+    #     self.update_chosen_trace(self.trace_A)
+    #     self.write_to_log("Initial values set")
 
     def run(self):
         self.mainwindow.mainloop()
@@ -242,12 +240,44 @@ class ANDO_OSA:
             self.scale_button.configure(text='LOG')
         self.write_to_log("Scale set to " + self.scale + ".")
 
-    def update_chosen_trace(self):
-        # check which of the trace buttons that casued this function to be run 
-        # is checked and set the chosen_trace variable accordingly
-        pass
+    def update_chosen_trace(self, button):
+        # button is 'A', 'B', 'C', 'D' or 'E', disable this button and enable the rest. print a suitable print to the log 
 
-        
+        if button == 'A':
+            self.trace_A.configure(state='disabled')
+            self.trace_B.configure(state='normal')
+            self.trace_C.configure(state='normal')
+            self.trace_D.configure(state='normal')
+            self.trace_E.configure(state='normal')
+            self.write_to_log("Trace A chosen.")
+        elif button == 'B':
+            self.trace_A.configure(state='normal')
+            self.trace_B.configure(state='disabled')
+            self.trace_C.configure(state='normal')
+            self.trace_D.configure(state='normal')
+            self.trace_E.configure(state='normal')
+            self.write_to_log("Trace B chosen.")
+        elif button == 'C':
+            self.trace_A.configure(state='normal')
+            self.trace_B.configure(state='normal')
+            self.trace_C.configure(state='disabled')
+            self.trace_D.configure(state='normal')
+            self.trace_E.configure(state='normal')
+            self.write_to_log("Trace C chosen.")
+        elif button == 'D':
+            self.trace_A.configure(state='normal')
+            self.trace_B.configure(state='normal')
+            self.trace_C.configure(state='normal')
+            self.trace_D.configure(state='disabled')
+            self.trace_E.configure(state='normal')
+            self.write_to_log("Trace D chosen.")
+        elif button == 'E':
+            self.trace_A.configure(state='normal')
+            self.trace_B.configure(state='normal')
+            self.trace_C.configure(state='normal')
+            self.trace_D.configure(state='normal')
+            self.trace_E.configure(state='disabled')
+            self.write_to_log("Trace E chosen.")
 
     def stop_measurement(self):
         pass
