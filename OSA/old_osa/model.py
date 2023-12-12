@@ -9,6 +9,11 @@ class OSAmodel:
         self.stop = '1700'
         self.scale = 'LOG'
         self.averages = '1'
+        self.center = str((float(self.start) + float(self.stop)) / 2)
+        self.span = str(float(self.stop) - float(self.start))
+        self.resolution = '0.05'
+        self.measurement_state = "STOP"
+        self.trace_state = "HOLD"
 
     # get setters without the @property notation 
     def get_current_trace(self):
@@ -26,6 +31,21 @@ class OSAmodel:
     def get_averages(self):
         return self.averages
     
+    def get_center(self):
+        return self.center
+    
+    def get_span(self):
+        return self.span
+    
+    def get_resolution(self):
+        return self.resolution
+    
+    def get_measurement_state(self):
+        return self.measurement_state
+    
+    def get_trace_state(self):
+        return self.trace_state
+    
     # setters
     def set_current_trace(self, current_trace):
         self.current_trace = current_trace
@@ -42,4 +62,17 @@ class OSAmodel:
     def set_averages(self, averages):
         self.averages = averages
 
-    
+    def set_center(self, center):
+        self.center = center
+
+    def set_span(self, span):
+        self.span = span
+        
+    def set_resolution(self, resolution):
+        self.resolution = resolution
+
+    def set_measurement_state(self, measurement_state):
+        self.measurement_state = measurement_state
+
+    def set_trace_state(self, trace_state):
+        self.trace_state = trace_state

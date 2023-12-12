@@ -4,10 +4,11 @@ import tkinter.ttk as ttk
 from pygubu.widgets.pathchooserinput import PathChooserInput
 import os 
 import time
+from controller import OSAcontroller
 
 
 class ANDO_OSA:
-    def __init__(self, master=None):
+    def __init__(self, osa_controller,  master=None):
         
         # build ui
         frame11 = ttk.Frame(master)
@@ -34,19 +35,13 @@ class ANDO_OSA:
         self.start_entry.grid(column=0, padx=5, pady=5, row=1)
         self.stop_entry = ttk.Entry(self.wl_frame)
         self.stop_entry.grid(column=1, pady=5, row=1)
-        self.stop_entry.bind("<Return>", self.update_stop)
-        self.stop_entry.bind("<FocusOut>", self.update_stop)
         self.center_entry = ttk.Entry(self.wl_frame)
         self.center_entry.grid(column=2, padx="5 0", pady=5, row=1)
-        self.center_entry.bind("<Return>", self.update_center)
-        self.center_entry.bind("<FocusOut>", self.update_center)
         self.span_label = ttk.Label(self.wl_frame)
         self.span_label.configure(text='Span')
         self.span_label.grid(column=3, padx=5, row=0)
         self.span_entry = ttk.Entry(self.wl_frame)
         self.span_entry.grid(column=3, padx=5, row=1)
-        self.span_entry.bind("<Return>", self.update_span)
-        self.span_entry.bind("<FocusOut>", self.update_span)
         self.wl_frame.grid(column=0, pady=5, row=0)
         
         
@@ -67,12 +62,8 @@ class ANDO_OSA:
         self.trace_E = ttk.Button(self.trace_frame)
         self.trace_E.configure(text='Trace E')
         self.trace_E.grid(column=4, padx=5, row=1)
-        self.trace_A.configure(command=self.update_chosen_trace)
-        self.trace_B.configure(command=self.update_chosen_trace)
-        self.trace_C.configure(command=self.update_chosen_trace)
-        self.trace_D.configure(command=self.update_chosen_trace)
-        self.trace_E.configure(command=self.update_chosen_trace)
-        
+
+
         self.update_button = ttk.Button(self.trace_frame)
         self.update_button.configure(text='Update')
         self.update_button.grid(column=1, pady=5, row=2)
@@ -82,24 +73,23 @@ class ANDO_OSA:
         self.display_button = ttk.Button(self.trace_frame)
         self.display_button.configure(text='Display')
         self.display_button.grid(column=3, row=2)
-        self.stop_indicator = ttk.Checkbutton(self.trace_frame)
-        self.stop_indicator.configure(text='Stop')
-        self.stop_indicator.grid(column=1, pady=5, row=0)
-        self.stop_indicator.configure(command=self.stop_measurement)
-        self.single_indicator = ttk.Checkbutton(self.trace_frame)
-        self.single_indicator.configure(text='Single')
-        self.single_indicator.grid(column=2, pady=5, row=0)
-        self.single_indicator.configure(
-            command=self.perform_single_measurement)
-        self.auto_indicator = ttk.Checkbutton(self.trace_frame)
-        self.auto_indicator.configure(text='Auto')
-        self.auto_indicator.grid(column=3, pady=5, row=0)
-        self.auto_indicator.configure(command=self.start_auto_measurement)
+                                 
+        self.stop_button = ttk.Button(self.trace_frame)
+        self.stop_button.configure(text='Stop')
+        self.stop_button.grid(column=1, pady=5, row=0)
+        self.stop_button.config(state=tk.DISABLED)
+        self.single_button = ttk.Button(self.trace_frame)
+        self.single_button.configure(text='Single')
+        self.single_button.grid(column=2, pady=5, row=0)
+        self.auto_button = ttk.Button(self.trace_frame)
+        self.auto_button.configure(text='Auto')
+        self.auto_button.grid(column=3, pady=5, row=0)
         self.trace_frame.grid(column=0, pady=5, row=2)
         
         
         self.log_frame = ttk.Frame(self.settings_frame)
         self.log_frame.configure(height=200, relief="raised", width=200)
+        # make text-field called log_window with a scrollbar to the right to scroll in the log 
         self.log_window = tk.Text(self.log_frame)
         self.log_window.configure(height=10, width=50)
         self.log_window.grid(column=0, padx=5, pady="0 5", row=1)
@@ -120,7 +110,6 @@ class ANDO_OSA:
         self.save_measurement_button = ttk.Button(self.save_frame)
         self.save_measurement_button.configure(text='Save measurement')
         self.save_measurement_button.grid(column=2, padx=5, pady=5, row=0)
-        self.save_measurement_button.configure(command=self.save_measurement)
         self.save_frame.grid(column=0, pady=5, row=4)
         
         
@@ -131,18 +120,17 @@ class ANDO_OSA:
         self.averages_label.grid(column=0, padx=5, pady=5, row=0)
         self.averages_entry = ttk.Entry(self.settings)
         self.averages_entry.grid(column=1, padx=5, pady=5, row=0)
-        self.averages_entry.configure(
-            validatecommand=self.update_averages_number)
+        #self.averages_entry.configure(validatecommand=self.update_averages_number)
         self.resolution_label = ttk.Label(self.settings)
         self.resolution_label.configure(text='Resolution :')
         self.resolution_label.grid(column=2, padx=5, row=0)
         __tkvar = tk.StringVar(value=0.05)
         self.__values = ['0.05', ' 0.1', ' 0.2', ' 0.5', ' 1', ' 2', ' 5', ' 10']
-        self.resolution_option = ttk.OptionMenu(
-            self.settings, __tkvar, 0.05, *self.__values, command=self.resolution_changed)
+        #self.resolution_option = ttk.OptionMenu(self.settings, __tkvar, 0.05, *self.__values, command=self.resolution_changed)
+        self.resolution_option = ttk.OptionMenu(self.settings, __tkvar, 0.05, *self.__values, command = osa_controller.resolution_changed)
         self.resolution_option.grid(column=4, padx=5, pady=5, row=0)
         self.scale_button = ttk.Button(self.settings)
-        self.scale_button.configure(text='LOG', command=self.scale_changed)
+        self.scale_button.configure(text='LOG')
         self.scale_button.grid(column=5, padx=5, row=0)
         self.settings.grid(column=0, padx=5, pady=5, row=1)
         self.settings_frame.grid(column=1, row=0)
@@ -156,152 +144,17 @@ class ANDO_OSA:
         # Main widget
         self.mainwindow = frame11
 
-    # def set_init_values(self):
-    #     self.start_entry.insert(0, "350")
-    #     self.stop_entry.insert(0, "1750")
-    #     self.update_center_entry()
-    #     self.update_span_entry()
-    #     self.averages_entry.insert(0, "1")
-    #     self.resolution = self.__values[0]
-    #     self.scale = "LOG"
-    #     self.update_chosen_trace(self.trace_A)
-    #     self.write_to_log("Initial values set")
 
     def run(self):
         self.mainwindow.mainloop()
 
-    def update_start(self, event):
-        start_wl = str(self.start_entry.get())
-        self.write_to_log("Start wavelength set to " + start_wl + " nm.")
-        self.update_center_entry()
-        self.update_span_entry()
-
-    def update_stop(self, event):
-        stop_wl = str(self.stop_entry.get())
-        self.write_to_log("Stop wavelength set to " + stop_wl + " nm.")
-        self.update_center_entry()
-        self.update_span_entry()
-
-    def update_center_entry(self):
-        start_wl = self.start_entry.get()
-        stop_wl = self.stop_entry.get()
-        if start_wl == "" or stop_wl == "":
-            return
-        else:
-            start_wl = float(start_wl)
-            stop_wl = float(stop_wl)
-        center_wl = (start_wl + stop_wl) / 2
-        self.center_entry.delete(0, tk.END)
-        self.center_entry.insert(0, str(center_wl))
-
-    def update_center(self, event):
-        span = float(self.span_entry.get())
-        center_wl = float(self.center_entry.get())
-        if span == "" or center_wl == "":
-            return
-        start_wl = center_wl - span / 2
-        stop_wl = center_wl + span / 2
-        self.start_entry.delete(0, tk.END)
-        self.start_entry.insert(0, str(start_wl))
-        self.stop_entry.delete(0, tk.END)
-        self.stop_entry.insert(0, str(stop_wl))
-        self.write_to_log("Center wavelength set to " + str(center_wl) + " nm.")
-
-    def update_span(self, event):
-        span = float(self.span_entry.get())
-        center_wl = float(self.center_entry.get())
-        if span == "" or center_wl == "":
-            return
-        start_wl = center_wl - span / 2
-        stop_wl = center_wl + span / 2
-        self.start_entry.delete(0, tk.END)
-        self.start_entry.insert(0, str(start_wl))
-        self.stop_entry.delete(0, tk.END)
-        self.stop_entry.insert(0, str(stop_wl))
-        self.write_to_log("Span set to " + str(span) + " nm.")
-
-    def update_span_entry(self):
-        start = float(self.start_entry.get())
-        stop = float(self.stop_entry.get())
-        span = stop - start
-        self.span_entry.delete(0, tk.END)
-        self.span_entry.insert(0, str(span))
-
-    def resolution_changed(self, event):
-        self.resolution = event
-        self.write_to_log("Resolution set to " + event + " nm.")
-
-    def scale_changed(self):
-        if self.scale == "LOG":
-            self.scale = "LIN"
-            self.scale_button.configure(text='LIN')
-        else:
-            self.scale = "LOG"
-            self.scale_button.configure(text='LOG')
-        self.write_to_log("Scale set to " + self.scale + ".")
-
-    def update_chosen_trace(self, button):
-        # button is 'A', 'B', 'C', 'D' or 'E', disable this button and enable the rest. print a suitable print to the log 
-
-        if button == 'A':
-            self.trace_A.configure(state='disabled')
-            self.trace_B.configure(state='normal')
-            self.trace_C.configure(state='normal')
-            self.trace_D.configure(state='normal')
-            self.trace_E.configure(state='normal')
-            self.write_to_log("Trace A chosen.")
-        elif button == 'B':
-            self.trace_A.configure(state='normal')
-            self.trace_B.configure(state='disabled')
-            self.trace_C.configure(state='normal')
-            self.trace_D.configure(state='normal')
-            self.trace_E.configure(state='normal')
-            self.write_to_log("Trace B chosen.")
-        elif button == 'C':
-            self.trace_A.configure(state='normal')
-            self.trace_B.configure(state='normal')
-            self.trace_C.configure(state='disabled')
-            self.trace_D.configure(state='normal')
-            self.trace_E.configure(state='normal')
-            self.write_to_log("Trace C chosen.")
-        elif button == 'D':
-            self.trace_A.configure(state='normal')
-            self.trace_B.configure(state='normal')
-            self.trace_C.configure(state='normal')
-            self.trace_D.configure(state='disabled')
-            self.trace_E.configure(state='normal')
-            self.write_to_log("Trace D chosen.")
-        elif button == 'E':
-            self.trace_A.configure(state='normal')
-            self.trace_B.configure(state='normal')
-            self.trace_C.configure(state='normal')
-            self.trace_D.configure(state='normal')
-            self.trace_E.configure(state='disabled')
-            self.write_to_log("Trace E chosen.")
-
-    def stop_measurement(self):
-        pass
-
-    def perform_single_measurement(self):
-        pass
-
-    def start_auto_measurement(self):
-        pass
-
-    def save_measurement(self):
-        pass
-
-    def update_averages_number(self):
-        pass
-
     def write_to_log(self, message):
-        # current time
-        ct = time.localtime()
-        # write to log
-        self.log_window.insert(tk.END, time.strftime("%H:%M:%S", ct) + " " + message + "\n")
+        # write the message to the log with the time in front of it, and scroll if the log writes below the text-field size
+        self.log_window.insert(tk.END, time.strftime("%H:%M:%S", time.localtime()) + " " + message + "\n")
+        self.log_window.see(tk.END)
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ANDO_OSA(root)
-    app.run()
+        # # current time
+        # ct = time.localtime()
+        # # write to log
+        # self.log_window.insert(tk.END, time.strftime("%H:%M:%S", ct) + " " + message + "\n")
