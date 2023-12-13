@@ -49,19 +49,13 @@ class ANDO_OSA:
         self.trace_frame.configure(height=200, relief="raised", width=200)
         self.trace_A = ttk.Button(self.trace_frame)
         self.trace_A.configure(text='Trace A')
-        self.trace_A.grid(column=0, padx=5, row=1)
+        self.trace_A.grid(column=1, padx=5, row=1)
         self.trace_B = ttk.Button(self.trace_frame)
         self.trace_B.configure(text='Trace B')
-        self.trace_B.grid(column=1, padx=5, row=1)
+        self.trace_B.grid(column=2, padx=5, row=1)
         self.trace_C = ttk.Button(self.trace_frame)
         self.trace_C.configure(text='Trace C')
-        self.trace_C.grid(column=2, padx=5, row=1)
-        self.trace_D = ttk.Button(self.trace_frame)
-        self.trace_D.configure(text='Trace D')
-        self.trace_D.grid(column=3, padx=5, row=1)
-        self.trace_E = ttk.Button(self.trace_frame)
-        self.trace_E.configure(text='Trace E')
-        self.trace_E.grid(column=4, padx=5, row=1)
+        self.trace_C.grid(column=3, padx=5, row=1)
 
 
         self.update_button = ttk.Button(self.trace_frame)
@@ -94,7 +88,7 @@ class ANDO_OSA:
         self.log_window.configure(height=10, width=50)
         self.log_window.grid(column=0, padx=5, pady="0 5", row=1)
         self.log_label = ttk.Label(self.log_frame)
-        self.log_label.configure(text='Log:')
+        self.log_label.configure(text='Status: Not connected.')
         self.log_label.grid(column=0, padx=5, pady="5 0", row=0, sticky="w")
         self.log_frame.grid(column=0, padx=5, pady=5, row=3)
         
@@ -139,7 +133,7 @@ class ANDO_OSA:
         #self.set_init_values()
 
         # Main widget
-        self.write_to_log("GUI initialized")
+        
 
         # Main widget
         self.mainwindow = frame11
@@ -149,12 +143,5 @@ class ANDO_OSA:
         self.mainwindow.mainloop()
 
     def write_to_log(self, message):
-        # write the message to the log with the time in front of it, and scroll if the log writes below the text-field size
         self.log_window.insert(tk.END, time.strftime("%H:%M:%S", time.localtime()) + " " + message + "\n")
         self.log_window.see(tk.END)
-
-
-        # # current time
-        # ct = time.localtime()
-        # # write to log
-        # self.log_window.insert(tk.END, time.strftime("%H:%M:%S", ct) + " " + message + "\n")

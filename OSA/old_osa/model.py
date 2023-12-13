@@ -14,6 +14,8 @@ class OSAmodel:
         self.resolution = '0.05'
         self.measurement_state = "STOP"
         self.trace_state = "HOLD"
+        self.trace_display_state = False
+        self.connected = False
 
     # get setters without the @property notation 
     def get_current_trace(self):
@@ -46,6 +48,12 @@ class OSAmodel:
     def get_trace_state(self):
         return self.trace_state
     
+    def get_connected(self):
+        return self.connected
+    
+    def get_trace_display_state(self):
+        return self.trace_display_state
+    
     # setters
     def set_current_trace(self, current_trace):
         self.current_trace = current_trace
@@ -76,3 +84,9 @@ class OSAmodel:
 
     def set_trace_state(self, trace_state):
         self.trace_state = trace_state
+
+    def set_connected(self, connected):
+        self.connected = connected
+
+    def set_trace_display_state(self, trace_display_state):
+        self.trace_display_state = trace_display_state
