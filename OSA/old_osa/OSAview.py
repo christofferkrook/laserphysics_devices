@@ -11,14 +11,14 @@ class ANDO_OSA:
     def __init__(self, osa_controller,  master=None):
         
         # build ui
-        frame11 = ttk.Frame(master)
-        frame11.configure(height=400, width=800)
-        self.spectrum_canvas = tk.Canvas(frame11)
+        self.frame11 = ttk.Frame(master)
+        self.frame11.configure(height=400, width=800)
+        self.spectrum_canvas = tk.Canvas(self.frame11)
         self.spectrum_canvas.configure(
             background="#ffffff", height=500, width=600)
         self.spectrum_canvas.grid(column=0, padx=5, pady=5, row=0)
         
-        self.settings_frame = ttk.Frame(frame11)
+        self.settings_frame = ttk.Frame(self.frame11)
         self.settings_frame.configure(height=200, relief="raised", width=200)
         self.wl_frame = ttk.Frame(self.settings_frame)
         self.wl_frame.configure(height=200, relief="raised", width=200)
@@ -118,17 +118,17 @@ class ANDO_OSA:
         self.resolution_label = ttk.Label(self.settings)
         self.resolution_label.configure(text='Resolution :')
         self.resolution_label.grid(column=2, padx=5, row=0)
-        __tkvar = tk.StringVar(value=0.05)
+        self.__tkvar = tk.StringVar(value=0.05)
         self.__values = ['0.05', ' 0.1', ' 0.2', ' 0.5', ' 1', ' 2', ' 5', ' 10']
         #self.resolution_option = ttk.OptionMenu(self.settings, __tkvar, 0.05, *self.__values, command=self.resolution_changed)
-        self.resolution_option = ttk.OptionMenu(self.settings, __tkvar, 0.05, *self.__values, command = osa_controller.resolution_changed)
+        self.resolution_option = ttk.OptionMenu(self.settings, self.__tkvar, 0.05, *self.__values, command = osa_controller.resolution_changed)
         self.resolution_option.grid(column=4, padx=5, pady=5, row=0)
         self.scale_button = ttk.Button(self.settings)
         self.scale_button.configure(text='LOG')
         self.scale_button.grid(column=5, padx=5, row=0)
         self.settings.grid(column=0, padx=5, pady=5, row=1)
         self.settings_frame.grid(column=1, row=0)
-        frame11.pack(expand=False)
+        self.frame11.pack(expand=False)
 
         #self.set_init_values()
 
@@ -136,7 +136,7 @@ class ANDO_OSA:
         
 
         # Main widget
-        self.mainwindow = frame11
+        self.mainwindow = self.frame11
 
 
     def run(self):
@@ -145,3 +145,6 @@ class ANDO_OSA:
     def write_to_log(self, message):
         self.log_window.insert(tk.END, time.strftime("%H:%M:%S", time.localtime()) + " " + message + "\n")
         self.log_window.see(tk.END)
+
+    def change_resolution_menu(self, option):
+        self.__tkvar.set(option)

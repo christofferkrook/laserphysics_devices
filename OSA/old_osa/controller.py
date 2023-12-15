@@ -3,6 +3,11 @@ from model import OSAmodel
 import tkinter as tk
 import Ando
 import time
+import threading
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+from queue import Queue
 
 # controller class for the model-view-controller design pattern of the OSA program
 class OSAcontroller:
@@ -11,6 +16,9 @@ class OSAcontroller:
     def __init__(self):
         self.model = OSAmodel()
         self.view = OSAview.ANDO_OSA(self, tk.Tk())
+
+        # Initialize a queue for communication between threads
+        self.trace_queue = Queue()
 
         # bind the wavelength fields
         self.view.start_entry.bind("<Return>", self.start_changed)
@@ -43,6 +51,7 @@ class OSAcontroller:
         self.connect_osa()
         self.set_init_values()
         self.update_function()
+        self.dequeue_traces()
         self.view.run()
         
 
@@ -53,9 +62,105 @@ class OSAcontroller:
             self.view.stop_button.config(state=tk.DISABLED)
             self.view.single_button.config(state=tk.NORMAL)
             self.view.auto_button.config(state=tk.NORMAL)
-        
 
-        self.view.mainwindow.after(200, self.update_function)
+        print("In main thread")
+        if not (hasattr(self, 't') and self.t.is_alive()):
+            # Retrieve traces from the OSA and put them in the queue
+            # retrieve traces and send OSA as argument in a separate thread
+
+            self.t = threading.Thread(target=self.retrieve_and_display_traces, daemon=True)
+            self.t.start()
+        else:
+            print("thread already started.")
+
+        self.view.mainwindow.after(20, self.update_function)
+
+
+    def retrieve_and_display_traces(self):
+        print("Retrieving traces")
+        try:
+            # check which are set to display
+            disp_a = self.OSA.inst.query('DSPA?')
+            if disp_a[0] == '1': 
+                disp_a = True
+            else:
+                disp_a = False
+            disp_b = self.OSA.inst.query('DSPB?')
+            if disp_b[0] == '1':
+                disp_b = True
+            else:
+                disp_b = False
+            disp_c = self.OSA.inst.query('DSPC?')
+            if disp_c[0] == '1':
+                disp_c = True
+            else:
+                disp_c = False
+
+            if disp_a:
+                trace_a = self.OSA.inst.query("LDATA")
+                trace_a = trace_a.split(',')
+                trace_a = trace_a[1:-1]
+                trace_a = [float(x) for x in trace_a]
+                lam_a = self.OSA.inst.query("WDATA")
+                lam_a = lam_a.split(',')
+                lam_a = lam_a[1:-1]
+                lam_a = [float(x) for x in lam_a]
+            if disp_b:
+                trace_b = self.OSA.inst.query("LDATB")
+                trace_b = trace_b.split(",")
+                trace_b = trace_b[1:-1]
+                trace_b = [float(x) for x in trace_b]
+                lam_b = self.OSA.inst.query("WDATB")
+                lam_b = lam_b.split(",")
+                lam_b = lam_b[1:-1]
+                lam_b = [float(x) for x in lam_b]
+                t2 = time.localtime()
+            if disp_c:
+                trace_c = self.OSA.inst.query("LDATC")
+                trace_c = trace_c.split(",")
+                trace_c = trace_c[1:-1]
+                trace_c = [float(x) for x in trace_c]
+                lam_c = self.OSA.inst.query("WDATC")
+                lam_c = lam_c.split(",")
+                lam_c = lam_c[1:-1]
+                lam_c = [float(x) for x in lam_c]
+
+            fig = Figure()
+            plot1 = fig.add_subplot(111)
+            # update the traces in the view
+            if disp_a:
+                plot1.plot(lam_a, trace_a, label='Trace A')
+            if disp_b:
+                plot1.plot(lam_b, trace_b, label='Trace B')
+            if disp_c:
+                plot1.plot(lam_c, trace_c, label='Trace C')
+            plot1.set_xlabel("Wavelength (nm)")
+            if self.model.scale == 'LOG':
+                plot1.set_ylabel("Power (dB)")
+            elif self.model.scale == 'LIN':
+                plot1.set_ylabel("Power")
+            plot1.legend() 
+            self.trace_queue.put(fig)
+        except:
+            print("Could not retrieve traces")
+
+        
+    def dequeue_traces(self):
+        # Dequeue the traces from the queue and draw them on the canvas
+        if not self.trace_queue.empty():
+            print("Queue was not empty")
+            fig = self.trace_queue.get()
+            self.view.mainwindow.after(0, self.draw_canvas(fig))
+        else:
+            print("Queue is empty")
+            pass
+        self.view.mainwindow.after(200, self.dequeue_traces)
+
+    def draw_canvas(self, fig):
+        # Draw the canvas on the main thread
+        self.view.spectrum_canvas = FigureCanvasTkAgg(fig, master=self.view.frame11)
+        self.view.spectrum_canvas.draw()
+        self.view.spectrum_canvas.get_tk_widget().grid(column=0, padx=5, pady=5, row=0)
 
         
     def connect_osa(self):
@@ -127,6 +232,7 @@ class OSAcontroller:
         curr_res = self.OSA.get_resolution()
         self.model.set_resolution(curr_res)
         # change resolution optionmenu to display the current resolution
+        self.view.change_resolution_menu(curr_res)
         
         self.view.write_to_log("Start-values set.")
     

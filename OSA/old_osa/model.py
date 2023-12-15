@@ -1,4 +1,4 @@
-
+import os
 
 # class called OSAmodel to hold all the OSA variables
 class OSAmodel:
@@ -16,6 +16,7 @@ class OSAmodel:
         self.trace_state = "HOLD"
         self.trace_display_state = False
         self.connected = False
+        self.save_dir = os.getcwd()+"/data"
 
     # get setters without the @property notation 
     def get_current_trace(self):
@@ -54,6 +55,9 @@ class OSAmodel:
     def get_trace_display_state(self):
         return self.trace_display_state
     
+    def get_save_dir(self):
+        return self.save_dir
+    
     # setters
     def set_current_trace(self, current_trace):
         self.current_trace = current_trace
@@ -90,3 +94,6 @@ class OSAmodel:
 
     def set_trace_display_state(self, trace_display_state):
         self.trace_display_state = trace_display_state
+
+    def set_save_dir(self, save_dir):
+        self.save_dir = save_dir

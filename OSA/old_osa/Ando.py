@@ -1,4 +1,5 @@
 import pyvisa as visa
+import numpy as np
 
 # creation of class
     
@@ -178,3 +179,31 @@ class Ando:
             self.inst.write('ATREF1')
             self.inst.write('ATSCL1')
         return self.get_scale()
+    
+    def get_trace(self, trace):
+        try:
+            step = 20
+            i_rep = 50
+            for i in range(i_rep):
+                result = self.inst.query('%s R%i-R%i' % ('LDAT'+trace, step*i+1, step*(i+1)))
+                axis_piece = result.lstrip().split(',')
+                axis_piece = axis_piece[1:]
+                axis_piece = np.array(axis_piece, dtype = float)
+                if i == 0:
+                    trace_data = axis_piece
+                else:
+                    trace_data = np.append(trace_data, axis_piece)
+
+            for i in range(i_rep):
+                result = self.inst.query('%s R%i-R%i' % ('WDAT'+trace, step*i+1, step*(i+1)))
+                axis_piece = result.lstrip().split(',')
+                axis_piece = axis_piece[1:]
+                axis_piece = np.array(axis_piece, dtype = float)
+                if i == 0:
+                    trace_wl = axis_piece
+                else:
+                    trace_wl = np.append(trace_wl, axis_piece)
+            return trace_data, trace_wl
+        except:
+            print("Could not get trace")
+            return 0, 0
