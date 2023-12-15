@@ -98,12 +98,12 @@ class ANDO_OSA:
         self.save_label = ttk.Label(self.save_frame)
         self.save_label.configure(text='Save directory :')
         self.save_label.grid(column=0, padx=5, row=0)
-        self.save_dir_chooser = PathChooserInput(self.save_frame)
-        self.save_dir_chooser.configure(mustexist=True, type="directory")
-        self.save_dir_chooser.grid(column=1, padx=5, row=0)
+        # self.save_dir_chooser = PathChooserInput(self.save_frame)
+        # self.save_dir_chooser.configure(mustexist=True, type="directory")
+        # self.save_dir_chooser.grid(column=1, padx=5, row=0)
         self.save_measurement_button = ttk.Button(self.save_frame)
         self.save_measurement_button.configure(text='Save measurement')
-        self.save_measurement_button.grid(column=2, padx=5, pady=5, row=0)
+        self.save_measurement_button.grid(column=1, padx=5, pady=5, row=0)
         self.save_frame.grid(column=0, pady=5, row=4)
         
         
@@ -133,13 +133,47 @@ class ANDO_OSA:
         #self.set_init_values()
 
         # Main widget
-        
+        self.focused_widget = 'none'
+
+        # bind so that when entries are focusIn, the focused_widget is set to the entry'
+        self.start_entry.bind("<FocusIn>", lambda event: self.change_focus('start'))
+        self.stop_entry.bind("<FocusIn>", lambda event: self.change_focus('stop'))
+        self.center_entry.bind("<FocusIn>", lambda event: self.change_focus('center'))
+        self.span_entry.bind("<FocusIn>", lambda event: self.change_focus('span'))
+        self.averages_entry.bind("<FocusIn>", lambda event: self.change_focus('averages'))
+
 
         # Main widget
         self.mainwindow = self.frame11
         master.iconphoto(True, tk.PhotoImage(file="troive_icon.png"))
-        
 
+        self.update_function()
+        
+    def change_focus(self, widget):
+        self.focused_widget = widget
+        self.update_widget_focus()
+
+    def get_focused_widget(self):
+        return self.focused_widget
+    
+    def update_function(self):
+        self.update_widget_focus()
+
+        self.mainwindow.after(100, self.update_function)
+
+    def update_widget_focus(self):
+        if self.get_focused_widget() == 'start':
+            self.start_entry.focus()
+        elif self.get_focused_widget() == 'stop':
+            self.stop_entry.focus()
+        elif self.get_focused_widget() == 'center':
+            self.center_entry.focus()
+        elif self.get_focused_widget() == 'span':
+            self.span_entry.focus()
+        elif self.get_focused_widget() == 'averages':
+            self.averages_entry.focus()
+        else:
+            pass
 
     def run(self):
         self.mainwindow.mainloop()
@@ -150,3 +184,27 @@ class ANDO_OSA:
 
     def change_resolution_menu(self, option):
         self.__tkvar.set(option)
+
+    # function that changes retrieve label state
+    def change_retrieving_label(self, state, con_state):
+        if state == 'retrieving' and con_state == True:
+            self.log_label.configure(text='Status: Connected. Retrieving...')
+        elif state == 'none' and con_state == True:
+            self.log_label.configure(text='Status: Connected.')
+        elif state == 'none' and con_state == False:
+            self.log_label.configure(text='Status: Not connected.')
+
+    # function that checks which widget has focus
+    def check_focus(self):
+        if self.start_entry.focus_get() == self.start_entry:
+            return 'start'
+        elif self.stop_entry.focus_get() == self.stop_entry:
+            return 'stop'
+        elif self.center_entry.focus_get() == self.center_entry:
+            return 'center'
+        elif self.span_entry.focus_get() == self.span_entry:
+            return 'span'
+        elif self.averages_entry.focus_get() == self.averages_entry:
+            return 'averages'
+        else:
+            return 'none'

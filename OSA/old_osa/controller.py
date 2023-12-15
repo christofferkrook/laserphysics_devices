@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from queue import Queue
-import osa_retriever
 
 # controller class for the model-view-controller design pattern of the OSA program
 class OSAcontroller:
@@ -94,17 +93,36 @@ class OSAcontroller:
         except Exception as e:
             print("Could not dequeue traces")
             #print(e)
-        self.view.mainwindow.after(200, self.dequeue_traces)
+        self.view.mainwindow.after(20, self.dequeue_traces)
 
     def draw_canvas(self, fig):
+        # which widget has focus before
+        focus = self.view.get_focused_widget()
         # Draw the canvas on the main thread
         self.view.spectrum_canvas = FigureCanvasTkAgg(fig, master=self.view.frame11)
         self.view.spectrum_canvas.draw()
         self.view.spectrum_canvas.get_tk_widget().grid(column=0, padx=5, pady=5, row=0)
 
-    def retrieve_traces(self):
-        print("Retrieving traces")
+        self.view.change_focus(focus)
+        
 
+    def retrieve_traces(self):
+        time.sleep(2)
+
+        # check connection status
+        if not self.OSA.check_connection_status():
+            self.view.write_to_log("Connection to OSA lost.")
+            self.model.connected = False
+            self.view.change_retrieving_label('none', False)
+            self.view.write_to_log("Trying to reconnect...")
+            reply = self.OSA.try_to_reconnect()
+            if reply:
+                self.model.set_connected(True)
+                self.view.change_retrieving_label('none', True)
+            else:
+                return
+
+        self.view.change_retrieving_label("retrieving", self.model.get_connected())
         # check what the measurement-status is. This is done here, in this thread, so the program does not slow down if the mainthread tries to chec kthis while it is already retrieving.
         sweep_status = self.OSA.get_sweep_status()
         self.model.set_measurement_state(sweep_status)
@@ -154,7 +172,7 @@ class OSAcontroller:
                 lam_c = lam_c.split(",")
                 lam_c = lam_c[1:-1]
                 lam_c = [float(x) for x in lam_c]
-
+            self.view.change_retrieving_label("none", self.model.get_connected())
             # combine trace_a-lam_a, trace_b-lam_b, trace_c-lam_c into tuples of vectors to hold the returned parameters
             traces = []
             if disp_a:
@@ -164,7 +182,6 @@ class OSAcontroller:
             if disp_c:
                 traces.append(('C', trace_c, lam_c))
             self.trace_queue.put(traces)
-            print("Retrievded traces and put them in queue")
         except Exception as e:
             print("Could not retrieve traces")
             print(e)

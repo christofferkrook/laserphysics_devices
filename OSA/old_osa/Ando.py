@@ -18,6 +18,25 @@ class Ando:
         self.inst.write_termination = '\n'
         self.inst.read_termination = '\n'
 
+        opened_resources = self.rm.list_opened_resources()
+        self.resource_name = opened_resources[0]
+
+    def check_connection_status(self):
+        try:
+            self.inst.query('*IDN?')
+            return True
+        except:
+            return False
+        
+    def try_to_reconnect(self):
+        self.rm2 = visa.ResourceManager()
+        try:
+            print(self.rm2.list_resources())
+            self.inst = self.rm2.open_resource('GPIB0::' + str(self.gpib_address) + '::INSTR')
+            return True
+        except:
+            return False
+
     # get the current trace
     def get_current_trace(self):
         try:
@@ -101,7 +120,7 @@ class Ando:
         elif sweep == 'SINGLE':
             self.inst.write('SGL')
         elif sweep == 'AUTO':
-            self.inst.write('AUTO')
+            self.inst.write('RPT')
         elif sweep == 'SEGMENT_MEASURE':
             self.inst.write('MEAS')
         return self.get_sweep_status()
