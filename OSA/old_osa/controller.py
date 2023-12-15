@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from queue import Queue
+import osa_retriever
 
 # controller class for the model-view-controller design pattern of the OSA program
 class OSAcontroller:
@@ -16,8 +17,8 @@ class OSAcontroller:
     def __init__(self):
         self.model = OSAmodel()
         self.view = OSAview.ANDO_OSA(self, tk.Tk())
-
-        # Initialize a queue for communication between threads
+        
+        # queue for talking between threads
         self.trace_queue = Queue()
 
         # bind the wavelength fields
@@ -56,28 +57,58 @@ class OSAcontroller:
         
 
     def update_function(self):
-        curr_meas_state = self.OSA.get_sweep_status()
-        if curr_meas_state == 'STOP':
-            self.model.measurement_state = 'STOP'
+        # check measurement state
+        if self.model.get_measurement_state() == 'STOP':
             self.view.stop_button.config(state=tk.DISABLED)
             self.view.single_button.config(state=tk.NORMAL)
             self.view.auto_button.config(state=tk.NORMAL)
 
-        print("In main thread")
-        if not (hasattr(self, 't') and self.t.is_alive()):
-            # Retrieve traces from the OSA and put them in the queue
-            # retrieve traces and send OSA as argument in a separate thread
-
-            self.t = threading.Thread(target=self.retrieve_and_display_traces, daemon=True)
+        # run retrieve_traces in separate thread
+        if not hasattr(self, 't'):
+            self.view.write_to_log("Starting retrieval of traces.")
+        if not hasattr(self, 't') or self.t.is_alive() == False:
+            self.t = threading.Thread(target=self.retrieve_traces, daemon=True)
             self.t.start()
-        else:
-            print("thread already started.")
 
         self.view.mainwindow.after(20, self.update_function)
+        
+    def dequeue_traces(self):
+        try:
+            # dequeue traces 
+            if not self.trace_queue.empty():
+                traces = self.trace_queue.get()
+                #print("Dequeued traces, number of traces in queue left is " + str(self.trace_queue.qsize()))
+                # create figure
+                fig = Figure(figsize=(5, 4), dpi=100)
+                # add subplot
+                a = fig.add_subplot(111)
+                # plot the traces
+                for trace in traces:
+                    # plot the trace and put trace[0] as the label
+                    a.plot(trace[2], trace[1], label="Trace " + trace[0])
 
+                # draw the canvas
+                # add legend
+                a.legend()
+                self.draw_canvas(fig)
+        except Exception as e:
+            print("Could not dequeue traces")
+            #print(e)
+        self.view.mainwindow.after(200, self.dequeue_traces)
 
-    def retrieve_and_display_traces(self):
+    def draw_canvas(self, fig):
+        # Draw the canvas on the main thread
+        self.view.spectrum_canvas = FigureCanvasTkAgg(fig, master=self.view.frame11)
+        self.view.spectrum_canvas.draw()
+        self.view.spectrum_canvas.get_tk_widget().grid(column=0, padx=5, pady=5, row=0)
+
+    def retrieve_traces(self):
         print("Retrieving traces")
+
+        # check what the measurement-status is. This is done here, in this thread, so the program does not slow down if the mainthread tries to chec kthis while it is already retrieving.
+        sweep_status = self.OSA.get_sweep_status()
+        self.model.set_measurement_state(sweep_status)
+
         try:
             # check which are set to display
             disp_a = self.OSA.inst.query('DSPA?')
@@ -114,7 +145,6 @@ class OSAcontroller:
                 lam_b = lam_b.split(",")
                 lam_b = lam_b[1:-1]
                 lam_b = [float(x) for x in lam_b]
-                t2 = time.localtime()
             if disp_c:
                 trace_c = self.OSA.inst.query("LDATC")
                 trace_c = trace_c.split(",")
@@ -125,44 +155,20 @@ class OSAcontroller:
                 lam_c = lam_c[1:-1]
                 lam_c = [float(x) for x in lam_c]
 
-            fig = Figure()
-            plot1 = fig.add_subplot(111)
-            # update the traces in the view
+            # combine trace_a-lam_a, trace_b-lam_b, trace_c-lam_c into tuples of vectors to hold the returned parameters
+            traces = []
             if disp_a:
-                plot1.plot(lam_a, trace_a, label='Trace A')
+                traces.append(('A', trace_a, lam_a)) 
             if disp_b:
-                plot1.plot(lam_b, trace_b, label='Trace B')
+                traces.append(('B', trace_b, lam_b))
             if disp_c:
-                plot1.plot(lam_c, trace_c, label='Trace C')
-            plot1.set_xlabel("Wavelength (nm)")
-            if self.model.scale == 'LOG':
-                plot1.set_ylabel("Power (dB)")
-            elif self.model.scale == 'LIN':
-                plot1.set_ylabel("Power")
-            plot1.legend() 
-            self.trace_queue.put(fig)
-        except:
+                traces.append(('C', trace_c, lam_c))
+            self.trace_queue.put(traces)
+            print("Retrievded traces and put them in queue")
+        except Exception as e:
             print("Could not retrieve traces")
+            print(e)
 
-        
-    def dequeue_traces(self):
-        # Dequeue the traces from the queue and draw them on the canvas
-        if not self.trace_queue.empty():
-            print("Queue was not empty")
-            fig = self.trace_queue.get()
-            self.view.mainwindow.after(0, self.draw_canvas(fig))
-        else:
-            print("Queue is empty")
-            pass
-        self.view.mainwindow.after(200, self.dequeue_traces)
-
-    def draw_canvas(self, fig):
-        # Draw the canvas on the main thread
-        self.view.spectrum_canvas = FigureCanvasTkAgg(fig, master=self.view.frame11)
-        self.view.spectrum_canvas.draw()
-        self.view.spectrum_canvas.get_tk_widget().grid(column=0, padx=5, pady=5, row=0)
-
-        
     def connect_osa(self):
         print("connecting to OSA")
         self.view.write_to_log("Connecting to OSA...")

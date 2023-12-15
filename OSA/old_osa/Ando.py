@@ -21,7 +21,7 @@ class Ando:
     # get the current trace
     def get_current_trace(self):
         try:
-            trace = self.inst.query('ACTV?')
+            trace = self.inst.query('ACTV?').strip()
             if trace[0] == '2':
                 return 'C'
             elif trace[0] == '1':
@@ -45,7 +45,7 @@ class Ando:
     # get display-status of current trace
     def get_display_status(self):
         try:
-            status = self.inst.query('DSP' + self.get_current_trace() + '?')
+            status = self.inst.query('DSP' + self.get_current_trace() + '?').strip()
             if status[0] == '1':
                 return True
             elif status[0] == '0':
@@ -63,7 +63,7 @@ class Ando:
 
     def get_write_status(self):
         try:
-            status = self.inst.query('TR' + self.get_current_trace() + '?')
+            status = self.inst.query('TR' + self.get_current_trace() + '?').strip()
             if status[0] == '0':
                 return True
             elif status[0] == '1':
@@ -81,7 +81,7 @@ class Ando:
 
     def get_sweep_status(self):
         try:
-            status = self.inst.query('SWEEP?')
+            status = self.inst.query('SWEEP?').strip()
             if status[0] == '0':
                 return 'STOP'
             elif status[0] == '1':
@@ -108,9 +108,9 @@ class Ando:
 
     def get_start_wl(self):
         try:
-            reply = self.inst.query('STAWL?')
+            reply = self.inst.query('STAWL?').strip()
             # remove everything after '.00'
-            return reply[:-4]
+            return reply
         except:
             print("Could not get start wavelength")
 
@@ -120,8 +120,8 @@ class Ando:
 
     def get_stop_wl(self):
         try:
-            reply = self.inst.query('STPWL?')
-            return reply[:-4]
+            reply = self.inst.query('STPWL?').strip()
+            return reply
         except:
             print("Could not get stop wavelength")
 
@@ -131,7 +131,7 @@ class Ando:
 
     def get_center_wl(self):
         try:
-            return self.inst.query('CTRWL?')
+            return self.inst.query('CTRWL?').strip()
         except:
             print("Could not get center wavelength")
 
@@ -141,7 +141,7 @@ class Ando:
 
     def get_averages(self):
         try:
-            return self.inst.query('AVG?')
+            return self.inst.query('AVG?').strip()
         except:
             print("Could not get averages")
 
@@ -151,7 +151,7 @@ class Ando:
 
     def get_resolution(self):
         try:
-            return self.inst.query('RESLN?')
+            return self.inst.query('RESLN?').strip()
         except:
             print("Could not get resolution")
 
@@ -180,30 +180,3 @@ class Ando:
             self.inst.write('ATSCL1')
         return self.get_scale()
     
-    def get_trace(self, trace):
-        try:
-            step = 20
-            i_rep = 50
-            for i in range(i_rep):
-                result = self.inst.query('%s R%i-R%i' % ('LDAT'+trace, step*i+1, step*(i+1)))
-                axis_piece = result.lstrip().split(',')
-                axis_piece = axis_piece[1:]
-                axis_piece = np.array(axis_piece, dtype = float)
-                if i == 0:
-                    trace_data = axis_piece
-                else:
-                    trace_data = np.append(trace_data, axis_piece)
-
-            for i in range(i_rep):
-                result = self.inst.query('%s R%i-R%i' % ('WDAT'+trace, step*i+1, step*(i+1)))
-                axis_piece = result.lstrip().split(',')
-                axis_piece = axis_piece[1:]
-                axis_piece = np.array(axis_piece, dtype = float)
-                if i == 0:
-                    trace_wl = axis_piece
-                else:
-                    trace_wl = np.append(trace_wl, axis_piece)
-            return trace_data, trace_wl
-        except:
-            print("Could not get trace")
-            return 0, 0

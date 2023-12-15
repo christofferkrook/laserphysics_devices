@@ -137,6 +137,8 @@ class ANDO_OSA:
 
         # Main widget
         self.mainwindow = self.frame11
+        master.iconphoto(True, tk.PhotoImage(file="troive_icon.png"))
+        
 
 
     def run(self):
