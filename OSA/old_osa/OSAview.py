@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 import tkinter as tk
 import tkinter.ttk as ttk
-from pygubu.widgets.pathchooserinput import PathChooserInput
 import time
 
 
@@ -57,10 +56,10 @@ class ANDO_OSA:
 
 
         self.update_button = ttk.Button(self.trace_frame)
-        self.update_button.configure(text='Update')
+        self.update_button.configure(text='Write')
         self.update_button.grid(column=1, pady=5, row=2)
         self.hold_button = ttk.Button(self.trace_frame)
-        self.hold_button.configure(text='Hold')
+        self.hold_button.configure(text='Fix')
         self.hold_button.grid(column=2, row=2)
         self.display_button = ttk.Button(self.trace_frame)
         self.display_button.configure(text='Display')
