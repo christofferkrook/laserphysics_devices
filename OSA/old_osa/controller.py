@@ -225,6 +225,12 @@ class OSAcontroller:
                 # draw the canvas
                 # add legend
                 a.legend()
+                # axises
+                a.set_xlabel("Wavelength (nm)")
+                if self.model.get_scale() == 'LOG':
+                    a.set_ylabel("Power dBm")
+                elif self.model.get_scale() == 'LIN':
+                    a.set_ylabel("Power mW")
                 self.draw_canvas(fig)
         except Exception as e:
             print("Could not dequeue traces")
