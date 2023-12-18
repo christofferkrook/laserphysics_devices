@@ -106,7 +106,7 @@ class Ando:
             elif status[0] == '1':
                 return 'SINGLE'
             elif status[0] == '2':
-                return 'REPEAT'
+                return 'AUTO'
             elif status[0] == '3':
                 return 'AUTO'
             elif status[0] == '4':
@@ -154,9 +154,25 @@ class Ando:
         except:
             print("Could not get center wavelength")
 
+    def get_span(self):
+        try:
+            return self.inst.query('SPAN?').strip()
+        except:
+            print("Could not get span")
+
+    def set_span(self, span):
+        try:
+            self.inst.write('SPAN' + str(span) + ".00")
+            return self.get_span()
+        except:
+            print("Could not set span")
+
     def set_center_wl(self, wl):
-        self.inst.write('CTRWL' + str(wl) + ".00")
-        return self.get_center_wl()
+        try:
+            self.inst.write('CTRWL' + str(wl) + ".00")
+            return self.get_center_wl()
+        except:
+            print("Could not set center wavelength")
 
     def get_averages(self):
         try:
@@ -165,8 +181,11 @@ class Ando:
             print("Could not get averages")
 
     def set_averages(self, averages):
-        self.inst.write('AVG' + str(averages))
-        return self.get_averages()
+        try:
+            self.inst.write('AVG' + str(averages))
+            return self.get_averages()
+        except:
+            print("Could not set averages")
 
     def get_resolution(self):
         try:
@@ -199,3 +218,35 @@ class Ando:
             self.inst.write('ATSCL1')
         return self.get_scale()
     
+    def get_trace(self, trace):
+
+        if trace == 'A':
+            trace_a = self.inst.query("LDATA")
+            trace_a = trace_a.split(',')
+            trace_a = trace_a[1:-1]
+            trace_a = [float(x) for x in trace_a]
+            lam_a = self.inst.query("WDATA")
+            lam_a = lam_a.split(',')
+            lam_a = lam_a[1:-1]
+            lam_a = [float(x) for x in lam_a]
+            return trace_a, lam_a
+        elif trace == 'B':
+            trace_b = self.inst.query("LDATB")
+            trace_b = trace_b.split(",")
+            trace_b = trace_b[1:-1]
+            trace_b = [float(x) for x in trace_b]
+            lam_b = self.inst.query("WDATB")
+            lam_b = lam_b.split(",")
+            lam_b = lam_b[1:-1]
+            lam_b = [float(x) for x in lam_b]
+            return trace_b, lam_b
+        elif trace == 'C':
+            trace_c = self.inst.query("LDATC")
+            trace_c = trace_c.split(",")
+            trace_c = trace_c[1:-1]
+            trace_c = [float(x) for x in trace_c]
+            lam_c = self.inst.query("WDATC")
+            lam_c = lam_c.split(",")
+            lam_c = lam_c[1:-1]
+            lam_c = [float(x) for x in lam_c]
+            return trace_c, lam_c

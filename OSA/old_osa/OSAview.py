@@ -2,9 +2,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 from pygubu.widgets.pathchooserinput import PathChooserInput
-import os 
 import time
-from controller import OSAcontroller
 
 
 class ANDO_OSA:
@@ -95,15 +93,27 @@ class ANDO_OSA:
         
         self.save_frame = ttk.Frame(self.settings_frame)
         self.save_frame.configure(height=200, relief="raised", width=200)
-        self.save_label = ttk.Label(self.save_frame)
-        self.save_label.configure(text='Save directory :')
-        self.save_label.grid(column=0, padx=5, row=0)
+        # self.save_label = ttk.Label(self.save_frame)
+        # self.save_label.configure(text='Save directory :')
+        # self.save_label.grid(column=0, padx=5, row=0)
         # self.save_dir_chooser = PathChooserInput(self.save_frame)
         # self.save_dir_chooser.configure(mustexist=True, type="directory")
         # self.save_dir_chooser.grid(column=1, padx=5, row=0)
         self.save_measurement_button = ttk.Button(self.save_frame)
         self.save_measurement_button.configure(text='Save measurement')
-        self.save_measurement_button.grid(column=1, padx=5, pady=5, row=0)
+        self.save_measurement_button.grid(column=0, padx=5, pady=5, row=0)
+        self.save_frame.grid(column=0, pady=5, row=4)
+        self.trace_a_save = ttk.Button(self.save_frame)
+        self.trace_a_save.configure(text='Trace A')
+        self.trace_a_save.grid(column=1, padx=5, pady=5, row=0)
+        self.save_frame.grid(column=0, pady=5, row=4)
+        self.trace_b_save = ttk.Button(self.save_frame)
+        self.trace_b_save.configure(text='Trace B')
+        self.trace_b_save.grid(column=2, padx=5, pady=5, row=0)
+        self.save_frame.grid(column=0, pady=5, row=4)
+        self.trace_c_save = ttk.Button(self.save_frame)
+        self.trace_c_save.configure(text='Trace C')
+        self.trace_c_save.grid(column=3, padx=5, pady=5, row=0)
         self.save_frame.grid(column=0, pady=5, row=4)
         
         
@@ -127,7 +137,7 @@ class ANDO_OSA:
         self.scale_button.configure(text='LOG')
         self.scale_button.grid(column=5, padx=5, row=0)
         self.settings.grid(column=0, padx=5, pady=5, row=1)
-        self.settings_frame.grid(column=1, row=0)
+        self.settings_frame.grid(column=1, row=0, padx="0 5")
         self.frame11.pack(expand=False)
 
         #self.set_init_values()

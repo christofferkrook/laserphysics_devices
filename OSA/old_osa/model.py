@@ -17,6 +17,9 @@ class OSAmodel:
         self.trace_display_state = False
         self.connected = False
         self.save_dir = os.getcwd()+"/data"
+        self.save_a = False
+        self.save_b = False
+        self.save_c = False
 
     # get setters without the @property notation 
     def get_current_trace(self):
