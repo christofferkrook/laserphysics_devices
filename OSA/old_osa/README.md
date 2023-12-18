@@ -10,4 +10,6 @@ The files are saved as .csv with ','-delimiter. If filename "test" is saved, the
 
 As retrieving traces from the OSA is a quite time-consuming activity, this is moved to another thread, however the program can still seem to "freeze" as a little bit as it is talking to the OSA. Perhaps other protocols than GPBI are faster.
 
+Dependencies: Tkinter, numpy, pyvisa, matplotlib, Queue, threading, csv. Most of these are standard python-modules however pyvisa for example must be installed with pip. 
+
 ![example view of the program](/OSA/old_osa/example.png)
