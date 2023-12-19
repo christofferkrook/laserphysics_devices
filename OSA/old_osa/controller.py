@@ -1,3 +1,7 @@
+# Author
+# Date: 19-12-2023
+# Christoffer Oxelmark Krook
+
 import OSAview
 from model import OSAmodel
 import tkinter as tk

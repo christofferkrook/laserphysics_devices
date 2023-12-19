@@ -1,3 +1,7 @@
+# Author
+# Date: 19-12-2023
+# Christoffer Oxelmark Krook
+
 import os
 
 # class called OSAmodel to hold all the OSA variables

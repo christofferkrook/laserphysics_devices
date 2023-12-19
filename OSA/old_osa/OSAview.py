@@ -1,4 +1,7 @@
-#!/usr/bin/python3
+# Author
+# Date: 19-12-2023
+# Christoffer Oxelmark Krook
+
 import tkinter as tk
 import tkinter.ttk as ttk
 import time

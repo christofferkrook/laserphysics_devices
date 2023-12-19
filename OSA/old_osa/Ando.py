@@ -1,3 +1,7 @@
+# Author
+# Date: 19-12-2023
+# Christoffer Oxelmark Krook
+
 import pyvisa as visa
 import numpy as np
 
