@@ -157,7 +157,7 @@ class ANDO_OSA:
 
         # Main widget
         self.mainwindow = self.frame11
-        master.iconphoto(True, tk.PhotoImage(file="troive_icon.png"))
+        #master.iconphoto(True, tk.PhotoImage(file="troive_icon.png"))
 
         self.update_function()
         
@@ -198,12 +198,16 @@ class ANDO_OSA:
         self.__tkvar.set(option)
 
     # function that changes retrieve label state
-    def change_retrieving_label(self, state, con_state):
-        if state == 'retrieving' and con_state == True:
-            self.log_label.configure(text='Status: Connected. Retrieving...')
-        elif state == 'none' and con_state == True:
-            self.log_label.configure(text='Status: Connected.')
-        elif state == 'none' and con_state == False:
+    def change_retrieving_label(self, state, con_state, lock_state):
+        if state == True and con_state == True and lock_state == False:
+            self.log_label.configure(text='Status: Connected. OSA Lock: unlocked. Retrieving...')
+        if state == True and con_state == True and lock_state == True:
+            self.log_label.configure(text='Status: Connected. OSA Lock: locked. Retrieving...')
+        elif state == False and con_state == True and lock_state == False:
+            self.log_label.configure(text='Status: Connected. OSA Lock: unlocked.')
+        elif state == False and con_state == True and lock_state == True:
+            self.log_label.configure(text='Status: Connected. OSA Lock: locked.')
+        elif con_state == False:
             self.log_label.configure(text='Status: Not connected.')
 
     # function that checks which widget has focus
