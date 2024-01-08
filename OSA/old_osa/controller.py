@@ -25,10 +25,9 @@ class OSAcontroller:
         assert sum([1, 2, 3]) == 6, "Should be 6"
         self.model = OSAmodel()
         self.view = OSAview.ANDO_OSA(self, tk.Tk())
-
+        
         # queue for talking between threads
         self.trace_queue = Queue()
-        self.retrieving = False
 
         # bind the wavelength fields
         self.view.start_entry.bind("<Return>", self.start_changed)
@@ -65,16 +64,12 @@ class OSAcontroller:
         self.view.trace_b_save.bind("<Button-1>", lambda event: self.save_state_change('B'))
         self.view.trace_c_save.bind("<Button-1>", lambda event: self.save_state_change('C'))
 
-        self.osa_lock = threading.Lock()
-
         self.view.write_to_log("GUI initialized")
         self.connect_osa()
         self.set_init_values()
         self.update_function()
         self.dequeue_traces()
-        self.status_label()
         #self.test()
-        self.print_lock_status()
         self.view.run()
 
 
@@ -199,9 +194,6 @@ class OSAcontroller:
 
         print(" ***** ALL TESTS PASSED *****")
 
-    def status_label(self):
-        self.view.change_retrieving_label(self.retrieving, self.model.get_connected(), self.osa_lock.locked())
-        self.view.mainwindow.after(20, self.status_label)
 
     def update_function(self):
         # check measurement state
@@ -216,15 +208,9 @@ class OSAcontroller:
         if not hasattr(self, 't') or self.t.is_alive() == False:
             self.t = threading.Thread(target=self.retrieve_traces, daemon=True)
             self.t.start()
+
         self.view.mainwindow.after(20, self.update_function)
         
-    def print_lock_status(self):
-        if self.osa_lock.locked():
-            print("OSA lock locked")
-        else:
-            print("OSA lock not locked")
-        self.view.mainwindow.after(100, self.print_lock_status)
-
     def dequeue_traces(self):
         try:
             # dequeue traces 
@@ -270,76 +256,81 @@ class OSAcontroller:
         time.sleep(2)
 
         # check connection status
-        self.retrieving = True
-        if self.osa_lock.acquire(timeout = 4):
-            # check what the measurement-status is. This is done here, in this thread, so the program does not slow down if the mainthread tries to chec kthis while it is already retrieving.
-            sweep_status = self.OSA.get_sweep_status()
-            self.model.set_measurement_state(sweep_status)
+        if not self.OSA.check_connection_status():
+            self.view.write_to_log("Connection to OSA lost.")
+            self.model.connected = False
+            self.view.change_retrieving_label('none', False)
+            self.view.write_to_log("Trying to reconnect...")
+            reply = self.OSA.try_to_reconnect()
+            if reply:
+                self.model.set_connected(True)
+                self.view.change_retrieving_label('none', True)
+            else:
+                return
 
-            try:
-                # check which are set to display
-                disp_a = self.OSA.inst.query('DSPA?')
-                if disp_a[0] == '1': 
-                    disp_a = True
-                else:
-                    disp_a = False
-                disp_b = self.OSA.inst.query('DSPB?')
-                if disp_b[0] == '1':
-                    disp_b = True
-                else:
-                    disp_b = False
-                disp_c = self.OSA.inst.query('DSPC?')
-                if disp_c[0] == '1':
-                    disp_c = True
-                else:
-                    disp_c = False
+        self.view.change_retrieving_label("retrieving", self.model.get_connected())
+        # check what the measurement-status is. This is done here, in this thread, so the program does not slow down if the mainthread tries to chec kthis while it is already retrieving.
+        sweep_status = self.OSA.get_sweep_status()
+        self.model.set_measurement_state(sweep_status)
 
-                if disp_a:
-                    trace_a = self.OSA.inst.query("LDATA")
-                    trace_a = trace_a.split(',')
-                    trace_a = trace_a[1:-1]
-                    trace_a = [float(x) for x in trace_a]
-                    lam_a = self.OSA.inst.query("WDATA")
-                    lam_a = lam_a.split(',')
-                    lam_a = lam_a[1:-1]
-                    lam_a = [float(x) for x in lam_a]
-                if disp_b:
-                    trace_b = self.OSA.inst.query("LDATB")
-                    trace_b = trace_b.split(",")
-                    trace_b = trace_b[1:-1]
-                    trace_b = [float(x) for x in trace_b]
-                    lam_b = self.OSA.inst.query("WDATB")
-                    lam_b = lam_b.split(",")
-                    lam_b = lam_b[1:-1]
-                    lam_b = [float(x) for x in lam_b]
-                if disp_c:
-                    trace_c = self.OSA.inst.query("LDATC")
-                    trace_c = trace_c.split(",")
-                    trace_c = trace_c[1:-1]
-                    trace_c = [float(x) for x in trace_c]
-                    lam_c = self.OSA.inst.query("WDATC")
-                    lam_c = lam_c.split(",")
-                    lam_c = lam_c[1:-1]
-                    lam_c = [float(x) for x in lam_c]
-                # combine trace_a-lam_a, trace_b-lam_b, trace_c-lam_c into tuples of vectors to hold the returned parameters
-                traces = []
-                if disp_a:
-                    traces.append(('A', trace_a, lam_a)) 
-                if disp_b:
-                    traces.append(('B', trace_b, lam_b))
-                if disp_c:
-                    traces.append(('C', trace_c, lam_c))
-                self.trace_queue.put(traces)
-            except Exception as e:
-                print("Could not retrieve traces")
-                print(e)
-                self.osa_lock.release()
-            self.retrieving = False
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
-            self.retrieving = False
+        try:
+            # check which are set to display
+            disp_a = self.OSA.inst.query('DSPA?')
+            if disp_a[0] == '1': 
+                disp_a = True
+            else:
+                disp_a = False
+            disp_b = self.OSA.inst.query('DSPB?')
+            if disp_b[0] == '1':
+                disp_b = True
+            else:
+                disp_b = False
+            disp_c = self.OSA.inst.query('DSPC?')
+            if disp_c[0] == '1':
+                disp_c = True
+            else:
+                disp_c = False
 
+            if disp_a:
+                trace_a = self.OSA.inst.query("LDATA")
+                trace_a = trace_a.split(',')
+                trace_a = trace_a[1:-1]
+                trace_a = [float(x) for x in trace_a]
+                lam_a = self.OSA.inst.query("WDATA")
+                lam_a = lam_a.split(',')
+                lam_a = lam_a[1:-1]
+                lam_a = [float(x) for x in lam_a]
+            if disp_b:
+                trace_b = self.OSA.inst.query("LDATB")
+                trace_b = trace_b.split(",")
+                trace_b = trace_b[1:-1]
+                trace_b = [float(x) for x in trace_b]
+                lam_b = self.OSA.inst.query("WDATB")
+                lam_b = lam_b.split(",")
+                lam_b = lam_b[1:-1]
+                lam_b = [float(x) for x in lam_b]
+            if disp_c:
+                trace_c = self.OSA.inst.query("LDATC")
+                trace_c = trace_c.split(",")
+                trace_c = trace_c[1:-1]
+                trace_c = [float(x) for x in trace_c]
+                lam_c = self.OSA.inst.query("WDATC")
+                lam_c = lam_c.split(",")
+                lam_c = lam_c[1:-1]
+                lam_c = [float(x) for x in lam_c]
+            self.view.change_retrieving_label("none", self.model.get_connected())
+            # combine trace_a-lam_a, trace_b-lam_b, trace_c-lam_c into tuples of vectors to hold the returned parameters
+            traces = []
+            if disp_a:
+                traces.append(('A', trace_a, lam_a)) 
+            if disp_b:
+                traces.append(('B', trace_b, lam_b))
+            if disp_c:
+                traces.append(('C', trace_c, lam_c))
+            self.trace_queue.put(traces)
+        except Exception as e:
+            print("Could not retrieve traces")
+            print(e)
 
     def connect_osa(self):
         print("connecting to OSA")
@@ -416,15 +407,11 @@ class OSAcontroller:
     
     # The user changed the start-values and thus the model needs to be updated and then the view, based on the values in the model
     def start_changed(self, event):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_start(self.view.start_entry.get())
-            start_wl = self.OSA.set_start_wl(self.model.get_start())
-            self.view.write_to_log("Start wavelength set to " + start_wl + " nm.")
-            self.update_center_entry()
-            self.update_span_entry()
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.model.set_start(self.view.start_entry.get())
+        start_wl = self.OSA.set_start_wl(self.model.get_start())
+        self.view.write_to_log("Start wavelength set to " + start_wl + " nm.")
+        self.update_center_entry()
+        self.update_span_entry()
 
     def update_stop_entry(self):
         self.view.stop_entry.delete(0, tk.END)
@@ -435,22 +422,17 @@ class OSAcontroller:
         self.view.start_entry.insert(0, str(float(self.model.get_center()) - float(self.model.get_span()) / 2))
 
     def averages_changed(self, event):
-        with self.osa_lock():
-            self.model.set_averages(self.view.averages_entry.get())
-            self.OSA.set_averages(self.model.get_averages())
-            self.view.write_to_log("Averages set to " + self.OSA.get_averages() + ".")
+        self.model.set_averages(self.view.averages_entry.get())
+        self.OSA.set_averages(self.model.get_averages())
+        self.view.write_to_log("Averages set to " + self.OSA.get_averages() + ".")
 
     # The user changed the stop-values and thus the model needs to be updated and then the view, based on the values in the model
     def stop_changed(self, event):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_stop(self.view.stop_entry.get())
-            stop_wl = self.OSA.set_stop_wl(self.model.get_stop())
-            self.view.write_to_log("Stop wavelength set to " + stop_wl + " nm.")
-            self.update_center_entry()
-            self.update_span_entry()
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.model.set_stop(self.view.stop_entry.get())
+        stop_wl = self.OSA.set_stop_wl(self.model.get_stop())
+        self.view.write_to_log("Stop wavelength set to " + stop_wl + " nm.")
+        self.update_center_entry()
+        self.update_span_entry()
 
     def update_center_entry(self):
         self.view.center_entry.delete(0, tk.END)
@@ -459,178 +441,142 @@ class OSAcontroller:
         self.model.set_center(new_center)
 
     def update_center(self, event):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_center(self.view.center_entry.get())
-            center_wl = self.OSA.set_center_wl(self.model.get_center())
-            self.view.write_to_log("Center wavelength set to " + center_wl + " nm.")
-            self.update_start_entry()
-            self.update_stop_entry()
-            self.update_span_entry()
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.model.set_center(self.view.center_entry.get())
+        center_wl = self.OSA.set_center_wl(self.model.get_center())
+        self.view.write_to_log("Center wavelength set to " + center_wl + " nm.")
+        self.update_start_entry()
+        self.update_stop_entry()
+        self.update_span_entry()
 
     def update_span_entry(self):
-        if self.osa_lock.acquire(timeout=4):
-            self.view.span_entry.delete(0, tk.END)
-            new_span = str(float(self.model.get_stop()) - float(self.model.get_start()))
-            self.view.span_entry.insert(0, new_span)
-            self.model.set_span(new_span)
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.view.span_entry.delete(0, tk.END)
+        new_span = str(float(self.model.get_stop()) - float(self.model.get_start()))
+        self.view.span_entry.insert(0, new_span)
+        self.model.set_span(new_span)
 
     def update_span(self, event):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_span(self.view.span_entry.get())
-            span = self.OSA.set_span(self.model.get_span())
-            self.view.write_to_log("Span wavelength set to " + span + " nm.")
-            self.update_start_entry()
-            self.update_stop_entry()
-            self.update_center_entry()
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.model.set_span(self.view.span_entry.get())
+        span = self.OSA.set_span(self.model.get_span())
+        self.view.write_to_log("Span wavelength set to " + span + " nm.")
+        self.update_start_entry()
+        self.update_stop_entry()
+        self.update_center_entry()
 
     def set_current_trace(self, current_trace):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_current_trace(current_trace)
-            curr = self.OSA.set_current_trace(self.model.get_current_trace())
-            current_display_state = self.OSA.get_display_status()
-            current_hold_state = self.OSA.get_write_status()
+        self.model.set_current_trace(current_trace)
+        curr = self.OSA.set_current_trace(self.model.get_current_trace())
+        current_display_state = self.OSA.get_display_status()
+        current_hold_state = self.OSA.get_write_status()
 
-            # check which is the current button, disable that one, and enable all the others
-            if curr == 'A':
-                self.view.trace_A.config(state=tk.DISABLED)
-                self.view.trace_B.config(state=tk.NORMAL)
-                self.view.trace_C.config(state=tk.NORMAL)
-            elif curr == 'B':
-                self.view.trace_A.config(state=tk.NORMAL)
-                self.view.trace_B.config(state=tk.DISABLED)
-                self.view.trace_C.config(state=tk.NORMAL)
-            elif curr == 'C':
-                self.view.trace_A.config(state=tk.NORMAL)
-                self.view.trace_B.config(state=tk.NORMAL)
-                self.view.trace_C.config(state=tk.DISABLED)
+        # check which is the current button, disable that one, and enable all the others
+        if curr == 'A':
+            self.view.trace_A.config(state=tk.DISABLED)
+            self.view.trace_B.config(state=tk.NORMAL)
+            self.view.trace_C.config(state=tk.NORMAL)
+        elif curr == 'B':
+            self.view.trace_A.config(state=tk.NORMAL)
+            self.view.trace_B.config(state=tk.DISABLED)
+            self.view.trace_C.config(state=tk.NORMAL)
+        elif curr == 'C':
+            self.view.trace_A.config(state=tk.NORMAL)
+            self.view.trace_B.config(state=tk.NORMAL)
+            self.view.trace_C.config(state=tk.DISABLED)
 
-            # check which is the current trace display state, disable that one, and enable all the others
-            if current_display_state:
-                self.model.set_trace_display_state(True)
-                self.view.display_button.config(state=tk.DISABLED)
-            else:
-                self.model.set_trace_display_state(False)
-                self.view.display_button.config(state=tk.NORMAL)
-            if current_hold_state:
-                self.model.set_trace_state('UPDATE')
-                self.view.update_button.config(state=tk.DISABLED)
-                self.view.hold_button.config(state=tk.NORMAL)
-            else:
-                self.model.set_trace_state('HOLD')
-                self.view.hold_button.config(state=tk.DISABLED)
-                self.view.update_button.config(state=tk.NORMAL)
-
-            # write to log 
-            self.view.write_to_log("Current trace set to " + self.model.get_current_trace() + ".")
-            self.osa_lock.release()
+        # check which is the current trace display state, disable that one, and enable all the others
+        if current_display_state:
+            self.model.set_trace_display_state(True)
+            self.view.display_button.config(state=tk.DISABLED)
         else:
-            print("Could not acquire lock")
+            self.model.set_trace_display_state(False)
+            self.view.display_button.config(state=tk.NORMAL)
+        if current_hold_state:
+            self.model.set_trace_state('UPDATE')
+            self.view.update_button.config(state=tk.DISABLED)
+            self.view.hold_button.config(state=tk.NORMAL)
+        else:
+            self.model.set_trace_state('HOLD')
+            self.view.hold_button.config(state=tk.DISABLED)
+            self.view.update_button.config(state=tk.NORMAL)
+
+        # write to log 
+        self.view.write_to_log("Current trace set to " + self.model.get_current_trace() + ".")
 
     def switch_scale(self):
-        if self.osa_lock.acquire(timeout=4):
-            if self.model.get_scale() == 'LOG':
-                self.model.set_scale('LIN')
-                self.OSA.set_scale(self.model.get_scale())
-                self.view.scale_button.configure(text=self.model.get_scale())
-                self.view.write_to_log("Scale set to " + self.OSA.get_scale() + ".")
-            elif self.model.get_scale() == 'LIN':
-                self.model.set_scale('LOG')
-                self.OSA.set_scale(self.model.get_scale())
-                self.view.scale_button.configure(text=self.model.get_scale())
-                self.view.write_to_log("Scale set to " + self.OSA.get_scale() + ".")
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        if self.model.get_scale() == 'LOG':
+            self.model.set_scale('LIN')
+            self.OSA.set_scale(self.model.get_scale())
+            self.view.scale_button.configure(text=self.model.get_scale())
+            self.view.write_to_log("Scale set to " + self.OSA.get_scale() + ".")
+        elif self.model.get_scale() == 'LIN':
+            self.model.set_scale('LOG')
+            self.OSA.set_scale(self.model.get_scale())
+            self.view.scale_button.configure(text=self.model.get_scale())
+            self.view.write_to_log("Scale set to " + self.OSA.get_scale() + ".")
 
     def resolution_changed(self, event):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.set_resolution(event)
-            self.OSA.set_resolution(self.model.get_resolution())
-            self.view.write_to_log("Resolution set to " + self.OSA.get_resolution() + ".")
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        self.model.set_resolution(event)
+        self.OSA.set_resolution(self.model.get_resolution())
+        self.view.write_to_log("Resolution set to " + self.OSA.get_resolution() + ".")
 
     def change_measurement_state(self, button):
-        if self.osa_lock.acquire(timeout=4):
-            # change value in the model
-            if button == 'stop':
-                self.model.measurement_state = 'STOP'
-                self.OSA.set_sweep_status('STOP')
-            elif button == 'single':
-                self.model.measurement_state = 'SINGLE'
-                self.OSA.set_sweep_status('SINGLE')
-            elif button == 'auto':
-                self.model.measurement_state = 'AUTO'
-                self.OSA.set_sweep_status('AUTO')
-            
-            # disable the chosen measurement_state_button and enable all the others
-            if self.model.measurement_state == 'STOP':
-                self.view.stop_button.config(state=tk.DISABLED)
-                self.view.single_button.config(state=tk.NORMAL)
-                self.view.auto_button.config(state=tk.NORMAL)
-            elif self.model.measurement_state == 'SINGLE':
-                self.view.stop_button.config(state=tk.NORMAL)
-                self.view.single_button.config(state=tk.DISABLED)
-                self.view.auto_button.config(state=tk.NORMAL)
-            elif self.model.measurement_state == 'AUTO':
-                self.view.stop_button.config(state=tk.NORMAL)
-                self.view.single_button.config(state=tk.NORMAL)
-                self.view.auto_button.config(state=tk.DISABLED)
+        # change value in the model
+        if button == 'stop':
+            self.model.measurement_state = 'STOP'
+            self.OSA.set_sweep_status('STOP')
+        elif button == 'single':
+            self.model.measurement_state = 'SINGLE'
+            self.OSA.set_sweep_status('SINGLE')
+        elif button == 'auto':
+            self.model.measurement_state = 'AUTO'
+            self.OSA.set_sweep_status('AUTO')
+        
+        # disable the chosen measurement_state_button and enable all the others
+        if self.model.measurement_state == 'STOP':
+            self.view.stop_button.config(state=tk.DISABLED)
+            self.view.single_button.config(state=tk.NORMAL)
+            self.view.auto_button.config(state=tk.NORMAL)
+        elif self.model.measurement_state == 'SINGLE':
+            self.view.stop_button.config(state=tk.NORMAL)
+            self.view.single_button.config(state=tk.DISABLED)
+            self.view.auto_button.config(state=tk.NORMAL)
+        elif self.model.measurement_state == 'AUTO':
+            self.view.stop_button.config(state=tk.NORMAL)
+            self.view.single_button.config(state=tk.NORMAL)
+            self.view.auto_button.config(state=tk.DISABLED)
 
-            # write to log
-            self.view.write_to_log("Measurement state set to " + self.model.measurement_state + ".")
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        # write to log
+        self.view.write_to_log("Measurement state set to " + self.model.measurement_state + ".")
 
     def change_trace_state(self, button):
-        if self.osa_lock.acquire(timeout=4):
-            # change value in the model
-            if button == 'update':
-                self.model.trace_state = 'UPDATE'
-                self.OSA.set_write_status(True)
-            elif button == 'hold':
-                self.model.trace_state = 'HOLD'
-                self.OSA.set_write_status(False)
-            
-            # disable the chosen trace_state_button and enable all the others
-            if self.model.trace_state == 'UPDATE':
-                self.view.update_button.config(state=tk.DISABLED)
-                self.view.hold_button.config(state=tk.NORMAL)
-            elif self.model.trace_state == 'HOLD':
-                self.view.update_button.config(state=tk.NORMAL)
-                self.view.hold_button.config(state=tk.DISABLED)
+        # change value in the model
+        if button == 'update':
+            self.model.trace_state = 'UPDATE'
+            self.OSA.set_write_status(True)
+        elif button == 'hold':
+            self.model.trace_state = 'HOLD'
+            self.OSA.set_write_status(False)
+        
+        # disable the chosen trace_state_button and enable all the others
+        if self.model.trace_state == 'UPDATE':
+            self.view.update_button.config(state=tk.DISABLED)
+            self.view.hold_button.config(state=tk.NORMAL)
+        elif self.model.trace_state == 'HOLD':
+            self.view.update_button.config(state=tk.NORMAL)
+            self.view.hold_button.config(state=tk.DISABLED)
 
-            # write to log
-            self.view.write_to_log("Trace state set to " + self.model.trace_state + ".")
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        # write to log
+        self.view.write_to_log("Trace state set to " + self.model.trace_state + ".")
 
     def change_trace_display_state(self, button):
-        if self.osa_lock.acquire(timeout=4):
-            self.model.trace_display_state = not self.model.trace_display_state
-            state = self.OSA.set_display_status(self.model.get_trace_display_state())
+        self.model.trace_display_state = not self.model.trace_display_state
+        state = self.OSA.set_display_status(self.model.get_trace_display_state())
 
-            if state:
-                self.view.display_button.config(state=tk.DISABLED)
-                self.view.write_to_log("Trace display state set to display.")
-            else:
-                self.view.display_button.config(state=tk.NORMAL)
-                self.view.write_to_log("Trace display state set to not display.")
-            self.osa_lock.release()
+        if state:
+            self.view.display_button.config(state=tk.DISABLED)
+            self.view.write_to_log("Trace display state set to display.")
         else:
-            print("Could not acquire lock")
+            self.view.display_button.config(state=tk.NORMAL)
+            self.view.write_to_log("Trace display state set to not display.")
 
     def save_measurement(self):
         # open a new tkinter-window with three checkboxes, 'A', 'B' and 'C', a button to choose a directory and a button to save
@@ -655,21 +601,16 @@ class OSAcontroller:
             self.view.write_to_log("Trace C saved to directory as " + filename+"_C" + ".csv")
 
     def save_trace(self, trace, filename):
-        if self.osa_lock.acquire(timeout=4):
-            trace, lam = self.OSA.get_trace(trace)
-            if len(trace) == len(lam):
-                # write to file
-                with open(self.model.save_dir + '/' + filename +  '.csv', 'w', newline='') as file:
-                    writer = csv.writer(file)
-                    # make list of tuples of (wavelength, trace)
-                    trace = list(zip(lam, trace))
-                    writer.writerows(trace)
-            self.osa_lock.release()
-        else:
-            print("Could not acquire lock")
+        trace, lam = self.OSA.get_trace(trace)
+        if len(trace) == len(lam):
+            # write to file
+            with open(self.model.save_dir + '/' + filename +  '.csv', 'w', newline='') as file:
+                writer = csv.writer(file)
+                # make list of tuples of (wavelength, trace)
+                trace = list(zip(lam, trace))
+                writer.writerows(trace)
 
     def save_state_change(self, button):
-        
         if button == 'A':
             self.model.save_a = not self.model.save_a
         elif button == 'B':

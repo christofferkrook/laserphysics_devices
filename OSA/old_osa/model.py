@@ -24,7 +24,6 @@ class OSAmodel:
         self.save_a = False
         self.save_b = False
         self.save_c = False
-        self.lock_status = False
 
     # get setters without the @property notation 
     def get_current_trace(self):

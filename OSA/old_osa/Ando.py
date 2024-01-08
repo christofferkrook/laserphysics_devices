@@ -15,9 +15,9 @@ class Ando:
         self.rm = visa.ResourceManager()
         try:
             self.inst = self.rm.open_resource('GPIB0::' + str(gpib_address) + '::INSTR')
-        except visa.VisaIOError:
+        except:
             self.inst = None
-            print("Could not connect to OSA" + str(visa.VisaIOError))
+            print('Could not connect to GPIB address ' + str(gpib_address))
         self.inst.timeout = 10000
         self.inst.write_termination = '\n'
         self.inst.read_termination = '\n'
