@@ -171,7 +171,7 @@ while True:
         print("Current save_dir is " + save_dir)
 
     elif command == "averages":
-        ave = osa.query(":SENSE:AVERAGE:COUNT?");
+        ave = osa.query(":SENSE:AVERAGE:COUNT?")
         ave = ave[0:-1].strip()
         r = input("Current number of averages is " + ave + ", do you want to change it? (y/n) : ")
         if r == "y":
