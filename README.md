@@ -1,2 +1,1 @@
-# laserphysics_devices
-Python and/or Matlab-scripts to control the hardware we have in the lab
+This is no longer maintained here. Current version maintained by https://github.com/adrianvagberg/laserphysics_devices
